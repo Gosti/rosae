@@ -118,7 +118,7 @@ func main() {
 	cmdList["public"] = public
 	cmdList["help"] = help
 
-	if len(os.Args) < 2 {
+	if len(os.Args) < 2 || cmdList[os.Args[1]] == nil {
 		checkErr(cmdList["help"]())
 		os.Exit(0)
 	}
