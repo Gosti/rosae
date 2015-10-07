@@ -4,23 +4,22 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"github.com/mrgosti/rosa"
 	"os"
 	"os/user"
 	"sort"
-	"strings"
+
+	"github.com/mrgosti/rosa"
 )
 
-type Command func() error
+type command func() error
 
 var _PrivateKey *rsa.PrivateKey
-var me *user.User
 
 func generate() error {
 	if len(os.Args) < 3 {
-		return errors.New("Not enought parameter to generate a key\n Rosae generate usage => rosae generate random text")
+		return errors.New("Not enought parameter to generate a key\n Rosae generate usage => rosae generate identity")
 	}
-	_, _, err := rosa.Generate(strings.Join(os.Args[2:], " "), true)
+	_, _, err := rosa.Generate(os.Args[2], true)
 	return err
 }
 
@@ -57,7 +56,7 @@ func add() error {
 		return err
 	}
 	him := &rosa.Friend{os.Args[2], key}
-	return him.Registrer(me.HomeDir + "/.rosa/friend_list")
+	return him.Register(rosa.FriendListPath)
 }
 
 func deleteFriend() error {
@@ -68,7 +67,7 @@ func deleteFriend() error {
 	if him == nil {
 		return errors.New("Friend not found\n")
 	}
-	return him.Delete(me.HomeDir + "/.rosa/friend_list")
+	return him.Delete(rosa.FriendListPath)
 }
 
 func public() error {
@@ -78,7 +77,7 @@ func public() error {
 
 func help() error {
 	fmt.Println("Rosae usage :")
-	fmt.Println("\trosae generate some word ... : generate a key based on the word you use as parameters")
+	fmt.Println("\trosae generate identity : generate a key pair")
 	fmt.Println("\trosae friends : give the name of all your friends")
 	fmt.Println("\trosae friend friend_name : give encoded public key of a given friend")
 	fmt.Println("\trosae public : give your public key")
@@ -96,20 +95,20 @@ func checkErr(err error) {
 }
 
 func main() {
-	var err error
-
-	me, err = user.Current()
+	me, err := user.Current()
 	checkErr(err)
 
-	_PrivateKey, err = rosa.LoadPrivateKey(me.HomeDir + "/.rosa/key.priv")
-	checkErr(err)
+	rosa.PrivateKeyPath = me.HomeDir + "/.rosa/key.priv"
+	rosa.PublicKeyPath = me.HomeDir + "/.rosa/key.pub"
+	rosa.FriendListPath = me.HomeDir + "/.rosa/friend_list"
 
-	err = rosa.LoadFriends(me.HomeDir + "/.rosa/friend_list")
-	checkErr(err)
+	_PrivateKey, err = rosa.LoadPrivateKey(rosa.PrivateKeyPath)
 
-	var cmdList map[string]Command
+	err = rosa.LoadFriends(rosa.FriendListPath)
 
-	cmdList = make(map[string]Command)
+	var cmdList map[string]command
+
+	cmdList = make(map[string]command)
 
 	cmdList["friends"] = friends
 	cmdList["friend"] = friend
